@@ -1,2 +1,2 @@
-# Sakila-MySQL-Sample-Database
+# Sakila-MySQL-Queries
 Sample movie store MySQL database.
