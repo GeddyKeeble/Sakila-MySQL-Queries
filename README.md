@@ -1,2 +1,167 @@
 # Sakila-MySQL-Queries
-Sample movie store MySQL database.
+SQL queries on the sample movie store MySQL database "Sakila".
+
+
+Unique customers by store ID.
+
+SELECT 
+    sakila.customer.store_id,
+    COUNT(DISTINCT (sakila.customer.customer_id))
+FROM
+    sakila.customer
+GROUP BY sakila.customer.store_id;
+
+
+Rental count by store ID.
+
+SELECT 
+    sakila.inventory.store_id, COUNT(sakila.rental.rental_id)
+FROM
+    sakila.rental
+        LEFT JOIN
+    sakila.inventory ON sakila.inventory.inventory_id = sakila.rental.inventory_id
+GROUP BY sakila.inventory.store_id;
+
+
+Rental count by film title.
+
+SELECT 
+    sakila.film.title,
+    sakila.film.film_id,
+    COUNT(sakila.film.title)
+FROM
+    sakila.rental
+        LEFT JOIN
+    sakila.inventory ON sakila.inventory.inventory_id = sakila.rental.inventory_id
+        LEFT JOIN
+    sakila.film ON sakila.film.film_id = sakila.inventory.film_id
+GROUP BY sakila.film.title;
+
+
+Inventory count by film.
+
+SELECT 
+    sakila.inventory.film_id,
+    sakila.film.title,
+    COUNT(sakila.inventory.film_id)
+FROM
+    sakila.inventory
+        LEFT JOIN
+    sakila.film ON sakila.film.film_id = sakila.inventory.film_id
+GROUP BY sakila.film.title;
+
+
+Inventory by film category (count and percent of total).
+
+SELECT 
+    sakila.film_category.category_id,
+    sakila.category.name,
+    COUNT(sakila.category.name) AS count,
+    ROUND(((COUNT(sakila.category.name) / (SELECT 
+                    COUNT(sakila.inventory.inventory_id)
+                FROM
+                    sakila.inventory)) * 100),
+            2) AS percent
+FROM
+    sakila.inventory
+        LEFT JOIN
+    sakila.film ON sakila.film.film_id = sakila.inventory.film_id
+        LEFT JOIN
+    sakila.film_category ON sakila.film_category.film_id = sakila.film.film_id
+        LEFT JOIN
+    sakila.category ON sakila.category.category_id = sakila.film_category.category_id
+GROUP BY sakila.category.name
+ORDER BY name ASC;
+
+
+Revenue by film category (sum and percent of total).
+
+SELECT 
+    sakila.category.name,
+    sakila.film_category.category_id,
+    COUNT(sakila.film.title) AS 'Count',
+    ROUND(SUM(sakila.payment.amount), 2) AS 'Revenue',
+    ROUND(SUM(sakila.payment.amount) / (SELECT 
+                    SUM(sakila.payment.amount)
+                FROM
+                    sakila.payment),
+            2) * 100 AS Percent
+FROM
+    sakila.rental
+        LEFT JOIN
+    sakila.payment ON sakila.payment.rental_id = sakila.rental.rental_id
+        LEFT JOIN
+    sakila.inventory ON sakila.inventory.inventory_id = sakila.rental.inventory_id
+        LEFT JOIN
+    sakila.film ON sakila.film.film_id = sakila.inventory.film_id
+        LEFT JOIN
+    sakila.film_category ON sakila.film_category.film_id = sakila.film.film_id
+        LEFT JOIN
+    sakila.category ON sakila.category.category_id = sakila.film_category.category_id
+GROUP BY sakila.category.name
+ORDER BY Revenue DESC;
+
+
+Top five films by revenue.
+
+SELECT 
+    sakila.film.title,
+    sakila.film.film_id,
+    COUNT(sakila.film.title) as "Count",
+    SUM(sakila.payment.amount) as "Revenue"
+FROM
+    sakila.rental
+	LEFT JOIN
+    sakila.payment ON sakila.payment.rental_id = sakila.rental.rental_id
+        LEFT JOIN
+    sakila.inventory ON sakila.inventory.inventory_id = sakila.rental.inventory_id
+        LEFT JOIN
+    sakila.film ON sakila.film.film_id = sakila.inventory.film_id
+GROUP BY sakila.film.title
+ORDER BY Revenue desc
+LIMIT 5;
+
+
+Customer count by store.
+
+SELECT sakila.customer.store_id, count(sakila.customer.customer_id) FROM sakila.customer 
+group by sakila.customer.store_id;
+
+Average rental duration.
+
+SELECT 
+    sakila.customer.store_id, COUNT(sakila.customer.customer_id)
+FROM
+    sakila.customer
+GROUP BY sakila.customer.store_id;
+
+
+Rank rental duration, Long, Normal and Short.
+
+SELECT 
+    sakila.rental.rental_id,
+    sakila.rental.rental_date,
+    sakila.rental.return_date,
+    DATEDIFF(sakila.rental.return_date,
+            sakila.rental.rental_date) AS 'rentalduration',
+    CASE
+        WHEN
+            DATEDIFF(sakila.rental.return_date,
+                    sakila.rental.rental_date) > 7
+        THEN
+            'Long'
+        WHEN
+            DATEDIFF(sakila.rental.return_date,
+                    sakila.rental.rental_date) >= 3
+                AND DATEDIFF(sakila.rental.return_date,
+                    sakila.rental.rental_date) <= 7
+        THEN
+            'Normal'
+        WHEN
+            DATEDIFF(sakila.rental.return_date,
+                    sakila.rental.rental_date) < 3
+        THEN
+            'Short'
+    END AS 'rentaltype'
+FROM
+    sakila.rental;
